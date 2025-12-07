@@ -1114,42 +1114,7 @@ def button_handler(update: Update, context: CallbackContext) -> None:
             logger.error(f"Error: {e}")
             query.message.reply_text("An error occurred.")
 
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    """A minimal HTTP server handler to satisfy Cloud Run's health check."""
-    def do_GET(self):
-        # Respond 200 OK for any GET request (especially the root path)
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b'Telegram Bot is alive and polling.')
-
-def run_health_check_server():
-    """Starts the simple HTTP server on the required Cloud Run port."""
-    # Cloud Run injects the required port via the PORT environment variable
-    port = int(os.environ.get("PORT", 8080))
-    server_address = ('0.0.0.0', port)
-    
-    # Use a try-except block in case the port is already in use
-    try:
-        httpd = HTTPServer(server_address, HealthCheckHandler)
-        print(f"Starting Cloud Run HTTP check server on port {port}...")
-        httpd.serve_forever()
-    except Exception as e:
-        # This will exit the program if the server fails to start (e.g., port issue)
-        print(f"FATAL: Failed to start HTTP server: {e}")
-        os._exit(1)
-
-
-# --- UPDATED MAIN FUNCTION ---
-
 def main() -> None:
-    """Starts the bot and the HTTP server concurrently."""
-    
-    # The TELEGRAM_TOKEN should be read from os.environ.get("TELEGRAM_TOKEN") here
-    TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-    if not TELEGRAM_TOKEN:
-        raise ValueError("TELEGRAM_TOKEN environment variable is not set. Cannot run bot.")
-        
     updater = Updater(TELEGRAM_TOKEN, use_context=True)
     dispatcher = updater.dispatcher
     
@@ -1157,31 +1122,9 @@ def main() -> None:
     dispatcher.add_handler(CommandHandler("search", search_command))
     dispatcher.add_handler(CallbackQueryHandler(button_handler))
 
-    # 1. Start the Telegram bot polling in a separate, non-blocking thread
-    polling_thread = threading.Thread(target=updater.start_polling, name="PollingThread", daemon=True)
-    polling_thread.start()
-    print("Telegram bot polling started in background thread.")
-
-    # 2. Run the simple HTTP server in the main thread. 
-    # This thread is blocked, but the polling thread keeps the bot responsive.
-    run_health_check_server()
-
+    updater.start_polling()
+    print("Bot is running...")
+    updater.idle()
 
 if __name__ == '__main__':
     main()
-
-# def main() -> None:
-#     updater = Updater(TELEGRAM_TOKEN, use_context=True)
-#     dispatcher = updater.dispatcher
-    
-#     dispatcher.add_handler(CommandHandler("start", start))
-#     dispatcher.add_handler(CommandHandler("search", search_command))
-#     dispatcher.add_handler(CallbackQueryHandler(button_handler))
-
-#     updater.start_polling()
-#     print("Bot is running...")
-#     updater.idle()
-
-# if __name__ == '__main__':
-
-#     main()
