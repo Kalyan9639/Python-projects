@@ -31,4 +31,4 @@ ENV PORT=10000
 # STARTUP COMMAND:
 # 1. Runs your bot (manga_bot.py) in the background (&)
 # 2. Runs Gunicorn (adsf.py) in the foreground to satisfy Render's port check
-CMD python manga_bot.py & gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 adsf:app
+CMD python telegram_bot.py & gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 telegram_bot:app
