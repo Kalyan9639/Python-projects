@@ -1,18 +1,34 @@
-# Dockerfile
-# Use a Python base image
-FROM python:3.9-slim
+# Use a slim Python image for smaller size and faster deployment
+FROM python:3.10-slim
 
-# Set the working directory
+# Environment variables for Python performance and logging
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Install essential system libraries for image/PDF processing (Pillow)
+# These are MANDATORY for the bot to generate PDFs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libjpeg-dev \
+    zlib1g-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
 
-# Copy the requirements file and install dependencies
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+# Add web server components for Render Free Tier compatibility
+RUN pip install flask gunicorn
 
-# Copy the bot script
-COPY telegram_bot.py .
+# Copy all project files
+COPY . .
 
-# Command to run the bot. We use polling here since webhook setup is complex.
-# Note: For professional Cloud Run deployment, you should use Webhooks, 
-# but polling is simpler for a private project.
-CMD ["python", "telegram_bot.py"]
+# Render's default port (Must be 10000)
+ENV PORT=10000
+
+# STARTUP COMMAND:
+# 1. Runs your bot (manga_bot.py) in the background (&)
+# 2. Runs Gunicorn (adsf.py) in the foreground to satisfy Render's port check
+CMD python manga_bot.py & gunicorn --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 0 adsf:app
